@@ -1,124 +1,741 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Fart Technologies</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <link rel="icon" type="image/x-icon" href="favicon.png" />
-    <meta property="og:image" content="https://ayans.pages.dev/bleh.png">
-    <meta property="og:title" content="Fart Technologies">
-    <meta property="og:description" content="Fart Technologies: Finding Absolutely Random Things">
-    <link rel="stylesheet" href="stylefart.css">
-    <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css" />
-    <script defer src="https://pyscript.net/alpha/pyscript.js"></script>
-    <script type="module" src="https://pyscript.net/releases/2024.3.1/core.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Walk Your Shift | Safety Game</title>
+<style>
+  :root{
+    --bg:#14171c; --panel:#1c2027; --panel-2:#232833; --line:#333a46;
+    --text:#f2f0e9; --muted:#9aa1ac;
+    --amber:#f5b700; --orange:#ff6a3d; --teal:#33c6a8;
+    --danger:#ff4d4d; --good:#33c98a; --info:#4aa3ff;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:repeating-linear-gradient(135deg,#191d24 0 24px,#171a20 24px 48px);
+    color:var(--text);
+    font-family:"Helvetica Neue",Arial,sans-serif;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:16px;
+  }
+  .stage{ width:100%; max-width:640px; }
+  .brand{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px; }
+  .brand h1{
+    font-family:Arial,sans-serif; font-weight:900; letter-spacing:-0.02em;
+    font-size:clamp(26px,6vw,38px); margin:0; line-height:0.95;
+  }
+  .brand h1 span{ color:var(--amber); }
+  .brand .tag{ color:var(--muted); font-size:13px; max-width:180px; text-align:right; line-height:1.3; }
+  .hazard-strip{
+    height:6px; border-radius:3px; margin-bottom:16px;
+    background:repeating-linear-gradient(-45deg,var(--amber) 0 10px,#14171c 10px 20px); opacity:0.9;
+  }
+  .panel{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; }
+
+  /* status */
+  .status-row{ display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+  .round-count{ font-weight:800; font-size:13px; color:var(--muted); white-space:nowrap; }
+  .progress-track{ flex:1; height:8px; background:var(--panel-2); border-radius:4px; overflow:hidden; }
+  .progress-fill{ height:100%; background:linear-gradient(90deg,var(--amber),var(--orange)); width:0%; transition:width .4s ease; }
+
+  .risk-row{ display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+  .risk-label{ font-size:12px; font-weight:700; color:var(--muted); white-space:nowrap; }
+  .risk-track{ flex:1; height:7px; background:var(--panel-2); border-radius:4px; overflow:hidden; }
+  .risk-fill{ height:100%; width:10%; background:var(--good); transition:width .5s ease, background .5s ease; }
+  .risk-value{ font-size:12px; font-weight:800; min-width:56px; text-align:right; color:var(--good); }
+
+  /* chips */
+  .chip-row{ display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .area-chip{
+    display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:800;
+    padding:5px 12px; border-radius:20px; color:var(--bg); background:var(--amber);
+  }
+  .count-chip{
+    display:inline-flex; align-items:center; font-size:12px; font-weight:700;
+    padding:5px 11px; border-radius:20px; color:var(--muted); border:1px solid var(--line); background:var(--panel-2);
+  }
+
+  .lead{ color:var(--muted); font-size:14px; line-height:1.5; margin:0 0 16px 0; }
+  .lead b{ color:var(--text); }
+
+  /* carry-forward banner */
+  .banner{
+    display:none; gap:10px; padding:12px 14px; border-radius:10px; margin-bottom:16px;
+    border:1px solid var(--orange); background:rgba(255,106,61,0.09);
+    font-size:13px; line-height:1.45; text-align:left;
+  }
+  .banner.show{ display:flex; }
+  .banner .dot{ flex:0 0 auto; width:8px; height:8px; border-radius:50%; background:var(--orange); margin-top:5px; }
+  .banner b{ color:var(--orange); }
+
+  /* tile grid */
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  @media (min-width:520px){ .grid{ grid-template-columns:1fr 1fr 1fr; } }
+  .tile{
+    text-align:left; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    border-radius:12px; padding:12px; cursor:pointer; display:flex; flex-direction:column; gap:8px;
+    transition:border-color .15s ease, transform .1s ease, background .15s ease; min-height:118px;
+  }
+  .tile:hover:not(:disabled){ border-color:var(--amber); transform:translateY(-2px); }
+  .tile:active:not(:disabled){ transform:translateY(0); }
+  .tile:disabled{ cursor:default; }
+  .tile .ic{ width:34px; height:34px; color:var(--muted); }
+  .tile .ic svg{ width:34px; height:34px; }
+  .tile .lbl{ font-size:13px; font-weight:800; line-height:1.2; }
+  .tile .det{ font-size:12px; color:var(--muted); line-height:1.35; }
+  .tile.done-good{ border-color:var(--good); background:rgba(51,201,138,0.10); }
+  .tile.done-good .ic{ color:var(--good); }
+  .tile.done-part{ border-color:var(--amber); background:rgba(245,183,0,0.10); }
+  .tile.done-part .ic{ color:var(--amber); }
+  .tile.done-safe{ border-color:var(--info); background:rgba(74,163,255,0.10); }
+  .tile.done-safe .ic{ color:var(--info); }
+  .tile.done-false{ border-color:var(--danger); background:rgba(255,77,77,0.10); }
+  .tile.done-false .ic{ color:var(--danger); }
+  .tile.done-missed{ border-color:var(--danger); background:rgba(255,77,77,0.06); opacity:0.85; }
+  .tile .status{ font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.03em; margin-top:auto; }
+  .status.good{ color:var(--good); } .status.part{ color:var(--amber); }
+  .status.safe{ color:var(--info); } .status.false{ color:var(--danger); } .status.missed{ color:var(--danger); }
+
+  .primary-btn{
+    width:100%; padding:14px; border-radius:10px; border:none; background:var(--amber);
+    color:#14171c; font-weight:800; font-size:15px; cursor:pointer;
+  }
+  .primary-btn:hover{ background:#ffc72c; }
+
+  /* modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(8,10,13,0.72); display:none;
+    align-items:center; justify-content:center; padding:16px; z-index:50;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    width:100%; max-width:520px; max-height:92vh; overflow-y:auto;
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:20px;
+  }
+  .modal .m-topic{
+    display:inline-block; font-size:11px; font-weight:800; padding:3px 9px; border-radius:20px; margin-bottom:10px;
+  }
+  .m-topic.struck-by{ color:var(--orange); background:rgba(255,106,61,0.12); }
+  .m-topic.struck-against{ color:var(--amber); background:rgba(245,183,0,0.12); }
+  .m-topic.slips{ color:var(--teal); background:rgba(51,198,168,0.12); }
+  .modal h3{ font-size:19px; font-weight:800; margin:0 0 8px 0; }
+  .modal .m-scene{ color:var(--muted); font-size:14px; line-height:1.5; margin:0 0 16px 0; }
+  .m-prompt{ font-size:12px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:10px; }
+  .actions{ display:flex; flex-direction:column; gap:9px; }
+  .action{
+    text-align:left; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:13px 15px; border-radius:10px; font-size:14px; line-height:1.4; cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .action:hover:not(:disabled){ border-color:var(--amber); }
+  .action:disabled{ cursor:default; }
+  .action.correct{ border-color:var(--good); background:rgba(51,201,138,0.12); }
+  .action.wrong{ border-color:var(--danger); background:rgba(255,77,77,0.10); }
+  .action.dim{ opacity:0.45; }
+  .m-feedback{ display:none; margin-top:14px; padding:13px 15px; border-radius:10px; border:1px solid var(--line); background:var(--panel-2); font-size:13px; line-height:1.5; }
+  .m-feedback.show{ display:block; }
+  .m-feedback .fh{ font-weight:800; font-size:12px; margin-bottom:5px; }
+  .m-feedback.good .fh{ color:var(--good); }
+  .m-feedback.bad .fh{ color:var(--danger); }
+  .m-feedback p{ margin:0; color:var(--muted); }
+  .m-close{
+    display:none; width:100%; margin-top:14px; padding:13px; border-radius:10px; border:none;
+    background:var(--amber); color:#14171c; font-weight:800; font-size:14px; cursor:pointer;
+  }
+  .m-close.show{ display:block; }
+  .m-safe{ display:none; }
+  .m-safe.show{ display:block; }
+
+  /* screens */
+  .screen{ text-align:center; padding:6px 2px; }
+  .screen h2{ font-size:24px; font-weight:900; margin:4px 0 10px 0; }
+  .screen p{ color:var(--muted); font-size:14px; line-height:1.55; max-width:460px; margin:0 auto 14px auto; }
+  .how{ text-align:left; max-width:460px; margin:0 auto 20px auto; display:flex; flex-direction:column; gap:10px; }
+  .how-row{ display:flex; gap:12px; align-items:flex-start; }
+  .how-row .n{ flex:0 0 auto; width:26px; height:26px; border-radius:50%; background:var(--amber); color:#14171c; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; }
+  .how-row .tx{ font-size:13px; color:var(--muted); line-height:1.45; }
+  .how-row .tx b{ color:var(--text); }
+
+  .badge-ring{
+    width:118px; height:118px; border-radius:50%; margin:0 auto 16px auto;
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+    border:5px solid var(--amber); background:var(--panel-2);
+  }
+  .badge-ring .pct{ font-size:27px; font-weight:900; }
+  .badge-ring .lbl{ font-size:10px; color:var(--muted); font-weight:700; }
+  .stat-row{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+  .stat{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px 14px; min-width:88px; }
+  .stat .v{ font-size:20px; font-weight:900; }
+  .stat .k{ font-size:11px; color:var(--muted); font-weight:700; margin-top:2px; }
+  .review-list{ text-align:left; max-width:480px; margin:0 auto 20px auto; display:flex; flex-direction:column; gap:7px; }
+  .review-row{ display:flex; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:8px; background:var(--panel-2); border:1px solid var(--line); font-size:12px; }
+  .review-row .mark{ font-weight:900; white-space:nowrap; }
+  .review-row.right .mark{ color:var(--good); }
+  .review-row.part .mark{ color:var(--amber); }
+  .review-row.missed .mark{ color:var(--danger); }
+
+  .hidden{ display:none !important; }
+</style>
 </head>
 <body>
-    <div id="top">
-        <a href="https://ayans.pages.dev">
-        <img id="logo" src="fartlogo.png" />
-        </a>
-        <div id="bar1" style="height: 60px;">
-           <b style="font-size: 28px;">Fart Technologies</b>
-        </div>
-        <a href="https://ayans.pages.dev" style="border: 5px ridge firebrick; height: 80px; width: 60px">
-            <img src="home.png" style="height: 80px; width: 60px;" />
-        </a>
-        <a href="articles.html" style="border: 5px ridge orangered; height: 80px; width: 60px">
-            <img src="news.png" style="height: 80px; width: 60px;" />
-        </a>
-        <a href="recipes.html" style="border: 5px ridge darkgoldenrod; height: 80px; width: 60px">
-            <img src="recipes.png" style="height: 80px; width: 60px;" />
-        </a>
-        <a href="info.html" style="border: 5px ridge darkgreen; height: 80px; width: 60px">
-            <img src="about.png" style="height: 80px; width: 60px;" />
-        </a>
-        <a href="downloads.html" style="border: 5px ridge darkblue; height: 80px; width: 60px;">
-            <img src="downloads.png" style="height: 80px; width: 60px;">  
-        </a>
-        <a href="extras.html" style="border: 5px ridge mediumturquoise; height: 80px; width: 60px">
-            <img src="extras.png" style="height: 80px; width: 60px;" />
-        </a>
-     </div>
-        <div id="content" style="width: 98%;">
-            <p>
-                Fart Technologies is a very farty website that farts very good tech reviews and articles,
-                downloads, tips and tricks, and recipes for some reason. We also like geography, history,
-                cricket, media, politics, food and finance. There's a guide on how to remove spyware from Samsung phones and some cricket scores below.
-                (Crictimes). Why is the ocean wet? Because the sea weed on it.
-            </p>
-            <b>For phones/tablets: Please enable "Desktop site" in your browser for a better experience.</b>
-            <p>
-                Email: actualbiryanitown@gmail.com<br />
-                Discord/X/Github: ayena32<br />
-                YouTube: @TheWindowsAddict
-            </p>
-        </div>
-        <img src="mainguide.png" style="width: 50%; min-height: 450px;" align="right">
-        <iframe src="https://widget.crictimes.org/" style="width: 50%; min-height: 450px;" frameborder="0" scrolling="yes" align="left"></iframe>
-        <style>
-            body {
-                background-image: url(backgroud.jpg);
-                font-family: Arial, sans-serif
-            }
+<div class="stage">
+  <div class="brand">
+    <h1>WALK YOUR <span>SHIFT</span></h1>
+    <div class="tag">Spot it. Deal with it. Before it finds you.</div>
+  </div>
+  <div class="hazard-strip"></div>
 
-            #bar1 {
-                border-style: ridge;
-                border-width: 8px;
-                border-color: royalblue;
-                padding: 10px;
-                margin: 3px;
-                width: 35%;
-                background-color: mediumaquamarine;
-            }
+  <div class="panel">
 
-            #logo {
-                width: 80px;
-                height: 60px;
-                border: 10px ridge royalblue;
-                margin: 5px
-            }
+    <!-- START -->
+    <div class="screen" id="startScreen">
+      <h2>Four sites. One shift. Your call.</h2>
+      <p>You're walking your shift across the distribution centre, the sandwich line, the pie hall and salad prep. Every floor is about the same three risks — being struck by something, struck against something, or a slip, trip or fall. Some are live hazards; some are those same risks already controlled. Your job is to tell them apart.</p>
+      <div class="how">
+        <div class="how-row"><div class="n">1</div><div class="tx"><b>Read the floor.</b> Tap anything you'd flag as a hazard. Some items are safe, good practice — flag those and it counts against you.</div></div>
+        <div class="how-row"><div class="n">2</div><div class="tx"><b>Deal with it.</b> Flag a real hazard and you choose how to handle it. Get the response right and it's controlled.</div></div>
+        <div class="how-row"><div class="n">3</div><div class="tx"><b>Mind your shift risk.</b> Anything you walk past becomes a near-miss — and unaddressed hazards come back later in the shift.</div></div>
+      </div>
+      <button class="primary-btn" id="startBtn">Clock on</button>
+    </div>
 
-            #content {
-                border: 10px ridge darkgoldenrod;
-                background-color: goldenrod;
-                padding: 5px;
-                text-align: center;
-                color: white;
-                width: 98%:
-            }
+    <!-- AREA INTRO -->
+    <div class="screen hidden" id="introScreen">
+      <div class="area-chip" id="introArea" style="margin:0 auto 14px auto;"></div>
+      <h2 id="introTitle"></h2>
+      <p id="introText"></p>
+      <div class="banner" id="introBanner"><span class="dot"></span><div id="introBannerText"></div></div>
+      <button class="primary-btn" id="enterBtn">Walk the floor</button>
+    </div>
 
-            #top {
-                display: inline-flex
-            }
-            p {
-                font-size: 17px;
-            }
-            a {
-                margin: 3px;
-            }
-        </style>
+    <!-- GAME -->
+    <div class="hidden" id="gameScreen">
+      <div class="status-row">
+        <span class="round-count" id="roundCount"></span>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+      <div class="risk-row">
+        <span class="risk-label">Shift risk</span>
+        <div class="risk-track"><div class="risk-fill" id="riskFill"></div></div>
+        <span class="risk-value" id="riskValue">Low</span>
+      </div>
+      <div class="chip-row">
+        <span class="area-chip" id="areaChip"></span>
+        <span class="count-chip" id="countChip"></span>
+      </div>
+      <p class="lead" id="areaLead"></p>
+      <div class="grid" id="grid"></div>
+      <button class="primary-btn" id="leaveBtn"></button>
+    </div>
 
+    <!-- AREA COMPLETE -->
+    <div class="screen hidden" id="areaDoneScreen">
+      <div class="area-chip" id="doneArea" style="margin:0 auto 14px auto;"></div>
+      <h2 id="doneTitle"></h2>
+      <div class="stat-row" id="doneStats"></div>
+      <p id="doneText"></p>
+      <button class="primary-btn" id="doneNextBtn"></button>
+    </div>
+
+    <!-- FINAL -->
+    <div class="screen hidden" id="endScreen">
+      <div class="badge-ring"><div class="pct" id="finalPct">0%</div><div class="lbl">HAZARDS CONTROLLED</div></div>
+      <h2 id="endHeading"></h2>
+      <div class="stat-row" id="endStats"></div>
+      <p id="endSummary"></p>
+      <div class="review-list" id="reviewList"></div>
+      <button class="primary-btn" id="restartBtn">Walk it again</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- HAZARD MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <span class="m-topic" id="mTopic"></span>
+    <h3 id="mTitle"></h3>
+    <p class="m-scene" id="mScene"></p>
+    <div id="mHazardBlock">
+      <div class="m-prompt">You've flagged it — now deal with it</div>
+      <div class="actions" id="mActions"></div>
+      <div class="m-feedback" id="mFeedback"><div class="fh" id="mFbHead"></div><p id="mFbText"></p></div>
+      <button class="m-close" id="mClose">Continue the walk</button>
+    </div>
+    <div class="m-safe" id="mSafeBlock">
+      <div class="m-feedback good show"><div class="fh" style="color:var(--info)">Nothing to flag here</div><p id="mSafeText"></p></div>
+      <button class="m-close show" id="mSafeClose">Continue the walk</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const ICONS = {
+    forklift:'<path d="M4 26h4v-9h6l4 6h9v3h3v-8h-4l-3-5h-9v8H8v-6H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="27" r="2.4" fill="currentColor"/><circle cx="24" cy="27" r="2.4" fill="currentColor"/>',
+    spill:'<ellipse cx="16" cy="24" rx="11" ry="3.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 6c3 5 5 8.5 5 11.5a5 5 0 1 1-10 0C11 14.5 13 11 16 6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+    edge:'<path d="M4 20h24" stroke="currentColor" stroke-width="1.8"/><path d="M4 20v-9M28 20v-9" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2"/><path d="M9 20V9M14 20V9M19 20V9" stroke="currentColor" stroke-width="1.4"/><circle cx="24" cy="26" r="2" fill="currentColor"/>',
+    falling:'<path d="M16 4v13" stroke="currentColor" stroke-width="1.8"/><path d="M12 13l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><rect x="9" y="21" width="14" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+    corner:'<path d="M6 6h20v6H12v14H6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 12l9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+    drawer:'<rect x="6" y="6" width="20" height="20" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6 16h20" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="19" width="10" height="2.4" rx="1.2" fill="currentColor"/>',
+    pallettruck:'<path d="M4 24h3v-8h16l3 4v4h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 16v8" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="26" r="2" fill="currentColor"/><circle cx="24" cy="26" r="2" fill="currentColor"/>',
+    rollerdoor:'<rect x="7" y="5" width="14" height="20" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 9h14M7 13h14M7 17h14M7 21h14" stroke="currentColor" stroke-width="1.2" opacity="0.6"/><path d="M21 8l5 3M21 20l5-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+    tools:'<path d="M9 23l9-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M19 8l5 5-3 3-5-5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="9" cy="23" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+    frame:'<path d="M6 26V10h6M12 10h14v6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6 26c6 0 8-2 8-8" stroke="currentColor" stroke-width="1.4" stroke-dasharray="2 2"/>',
+    pipe:'<rect x="4" y="12" width="24" height="5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 24l4-6M14 24l4-6M20 24l4-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+    cable:'<path d="M4 24c6 0 4-9 10-9s4 9 10 9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="4" cy="24" r="2" fill="currentColor"/><circle cx="24" cy="24" r="2" fill="currentColor"/>',
+    crates:'<rect x="5" y="16" width="10" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="8" y="9" width="10" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+    sign:'<path d="M16 5l12 21H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M16 13v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="23" r="1.2" fill="currentColor"/>',
+    shield:'<path d="M16 4l10 4v7c0 7-5 11-10 13-5-2-10-6-10-13V8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M11 15l4 4 7-8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+    ppe:'<path d="M11 7h10l3 5v14a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V12z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M11 7l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+    boxed:'<rect x="6" y="10" width="20" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6 16h20" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>'
+  };
+
+  const TCLASS = { 'Struck by':'struck-by', 'Struck against':'struck-against', 'Slips, trips & falls':'slips' };
+
+  const AREAS = [
+    {
+      name:'Distribution Centre',
+      intro:'Goods-in, dispatch and the yard — where vehicles and people share the same space, and loads are moving all shift.',
+      lead:'Six things caught your eye on the way through. <b>Tap whatever you\u2019d flag.</b>',
+      items:[
+        { hazard:true, icon:'forklift', topic:'Struck by', label:'Yard route',
+          det:'Forklift reversing across the pedestrian walkway; the marked crossing is blocked by pallets.',
+          scene:'A forklift is reversing between the loading bay and the racking. The marked pedestrian walkway is blocked today by parked pallets.',
+          actions:[
+            {t:'Report the blocked walkway and use a safe route, or wait.', ok:true, fb:'Segregated routes are a core control. If one\u2019s blocked, report it and use another \u2014 don\u2019t improvise a crossing.'},
+            {t:'Cut across quickly \u2014 the driver can probably see you.', ok:false, fb:'Eye contact isn\u2019t a safety system. Reversing forklifts have blind spots and long stopping distances.'},
+            {t:'Wave to the driver, then walk through.', ok:false, fb:'A wave relies on the driver noticing you over noise and mirrors. Fix the blocked walkway instead.'}
+          ]},
+        { hazard:true, icon:'spill', topic:'Slips, trips & falls', label:'Goods-in floor',
+          det:'A puddle under a leaking pallet, right on the walkway. No wet-floor sign out.',
+          scene:'A puddle is spreading from a leaking pallet in the goods-in walkway. There\u2019s no wet floor sign, and people keep walking past.',
+          actions:[
+            {t:'Put a warning out, then get it cleaned and reported.', ok:true, fb:'Warn first, then clean and report. Slips on wet floors are one of the most common workplace injuries.'},
+            {t:'Walk around it \u2014 someone later will deal with it.', ok:false, fb:'Left live, the very next person through could go down. \u201CLater\u201D isn\u2019t a control.'},
+            {t:'Mop it and move on without flagging it.', ok:false, fb:'No warning while you fetch a mop, and a recurring leak still needs reporting so the cause gets fixed.'}
+          ]},
+        { hazard:true, icon:'edge', topic:'Slips, trips & falls', label:'Dispatch mezzanine',
+          det:'A section of edge-protection barrier is missing, close to where stock is picked.',
+          scene:'On the dispatch mezzanine, part of the edge protection barrier is missing a section, right by where you\u2019d be working.',
+          actions:[
+            {t:'Stop, report the missing barrier, and keep clear until fixed.', ok:true, fb:'A gap in edge protection at height is a serious fall risk \u2014 it should stop work in that area until repaired.'},
+            {t:'Stay back from the gap and work carefully.', ok:false, fb:'Alertness doesn\u2019t remove a fall-from-height risk. The barrier needs restoring first.'},
+            {t:'Work quickly on the far side to cut time near it.', ok:false, fb:'Less time near a hazard isn\u2019t the same as removing it. Restore the protection first.'}
+          ]},
+        { hazard:true, icon:'falling', topic:'Struck by', label:'High-bay rack',
+          det:'A top-level pallet is stacked unevenly and overhangs the aisle below.',
+          scene:'A pallet of cartons on the top level of the racking is stacked unevenly, overhanging slightly above a busy picking aisle.',
+          actions:[
+            {t:'Report it and keep the aisle clear until it\u2019s restacked.', ok:true, fb:'Overhanging loads at height should stop work in the aisle below until someone trained restacks them.'},
+            {t:'It\u2019s above head height, so carry on underneath.', ok:false, fb:'Height doesn\u2019t reduce the risk \u2014 a fall from a top bay carries more force, not less.'},
+            {t:'Nudge it back into line with a pallet-truck fork.', ok:false, fb:'Adjusting an unstable load from below risks bringing it down. Leave it to trained racking staff.'}
+          ]},
+        { hazard:false, topic:'Struck by', icon:'crates', label:'Empty cages',
+          det:'Stacked squarely to a safe height and kept clear of the gangway.',
+          safe:'Stored correctly \u2014 squared up, safe height, nothing that could topple or be struck by. Good practice, nothing to flag.' },
+        { hazard:false, topic:'Slips, trips & falls', icon:'cable', label:'Power cables',
+          det:'Run overhead in trunking, kept up off the floor and out of the walkway.',
+          safe:'Cables run overhead in trunking rather than across the floor \u2014 exactly how a trailing-lead trip hazard should be designed out.' }
+      ]
+    },
+    {
+      name:'Sandwich Factory',
+      intro:'High-speed lines, constant washdowns and a lot of foot traffic between production and the chill.',
+      lead:'Six points on the sandwich floor. <b>Tap whatever you\u2019d flag.</b>',
+      items:[
+        { hazard:true, icon:'spill', topic:'Slips, trips & falls', label:'Line washdown',
+          det:'Floor wet with water and detergent; the anti-slip mat has been pulled aside.',
+          scene:'Between runs the line is being washed down. The floor by the walkway is wet with water and detergent, and the anti-slip mat that\u2019s normally there has been moved aside.',
+          actions:[
+            {t:'Put the mat back or a wet-floor sign out before anyone crosses.', ok:true, fb:'Washdown areas need matting, a warning, or a blocked route until dry \u2014 restore the control, don\u2019t rely on footing.'},
+            {t:'Walk through carefully, close to the wall.', ok:false, fb:'Careful footing doesn\u2019t change the friction on a detergent-covered floor \u2014 for you or whoever follows.'},
+            {t:'Take your usual route, just slower.', ok:false, fb:'Slowing down doesn\u2019t fix a wet floor. The missing mat or sign is the actual gap.'}
+          ]},
+        { hazard:true, icon:'pallettruck', topic:'Struck by', label:'Chiller corridor',
+          det:'A powered pallet truck is moving through; no separate pedestrian walkway here.',
+          scene:'A powered pallet truck loaded with trays is moving along the corridor to the chiller. You need past with an armful of trays, and there\u2019s no separate walkway marked.',
+          actions:[
+            {t:'Wait for the truck to stop before passing.', ok:true, fb:'Wait for powered trucks to stop, especially where people and vehicles aren\u2019t separated. The operator\u2019s view is often blocked by the load.'},
+            {t:'Squeeze past close to the wall while it moves.', ok:false, fb:'These trucks are heavier and less nimble than they look. Squeezing past a moving one removes your margin.'},
+            {t:'Call out for the operator to keep going \u2014 you\u2019ll dodge round.', ok:false, fb:'Shouting over line noise isn\u2019t reliable coordination with someone whose view is restricted.'}
+          ]},
+        { hazard:true, icon:'rollerdoor', topic:'Struck against', label:'Chiller door track',
+          det:'The roller-door guide track juts into the walkway at shoulder height where it narrows.',
+          scene:'The rapid roller door to the chiller has a metal guide track sticking out into the walkway at shoulder height, right where the corridor narrows.',
+          actions:[
+            {t:'Report it so the track gets guarded or repositioned.', ok:true, fb:'A protruding fixed fitting on a narrow, busy walkway should be corrected \u2014 not just remembered around.'},
+            {t:'Turn side-on going through, like everyone does.', ok:false, fb:'A workaround that depends on everyone remembering leaves new starters and distracted people exposed.'},
+            {t:'Put a warning sticker on it yourself.', ok:false, fb:'A sticker raises awareness briefly but doesn\u2019t remove the protrusion. Get it guarded properly.'}
+          ]},
+        { hazard:true, icon:'drawer', topic:'Struck against', label:'Packing bench',
+          det:'A stock cage gate is left swung open at shin height beside a busy walkway.',
+          scene:'By a packing bench, a stock cage has been left with its gate swung open at shin height, right next to a walkway people use often.',
+          actions:[
+            {t:'Close the gate and mention it to whoever\u2019s on the bench.', ok:true, fb:'Simple, immediate, and it fixes the cause. The easiest hazards are often the ones to just sort on the spot.'},
+            {t:'Leave it \u2014 not your bench or your cage.', ok:false, fb:'A hazard doesn\u2019t need an owner before it\u2019s fixed. A five-second close prevents an easy injury.'},
+            {t:'Step around it and carry on.', ok:false, fb:'That protects you for one trip past and leaves it live for the next person through.'}
+          ]},
+        { hazard:false, topic:'Slips, trips & falls', icon:'sign', label:'Wet-floor sign',
+          det:'Already out and correctly placed where a bay floor is still drying.',
+          safe:'The slip warning\u2019s already out where it\u2019s needed \u2014 that\u2019s the control working as intended. Nothing to flag.' },
+        { hazard:false, topic:'Struck against', icon:'boxed', label:'Overhead pipework',
+          det:'Boxed in and clearly marked where it crosses above the walkway.',
+          safe:'The pipework is boxed in and marked \u2014 a struck-against hazard designed out properly. Good practice.' }
+      ]
+    },
+    {
+      name:'Pie Factory',
+      intro:'Ovens, heavy ingredient handling and elevated maintenance work over live lines.',
+      lead:'Five points on the pie floor caught your attention. <b>Tap whatever you\u2019d flag.</b>',
+      items:[
+        { hazard:true, icon:'falling', topic:'Struck by', label:'Ingredient rack',
+          det:'A pallet above the pick face is stacked overhanging the edge.',
+          scene:'You need a box from the bottom of the ingredient racking. The pallet above it is stacked slightly overhanging the edge.',
+          actions:[
+            {t:'Flag it to a supervisor before anyone works underneath.', ok:true, fb:'Unstable or overhanging loads should be corrected before anyone works below \u2014 basic racking safety.'},
+            {t:'Grab your box quickly \u2014 you\u2019re only there a second.', ok:false, fb:'A single second under a falling load is one too many. Time underneath doesn\u2019t reduce the risk.'},
+            {t:'Push it back square yourself and carry on.', ok:false, fb:'Pushing a load you\u2019re unsure of can bring it down on you. That\u2019s a job for trained staff.'}
+          ]},
+        { hazard:true, icon:'tools', topic:'Struck by', label:'Oven-line platform',
+          det:'A colleague working above the walkway has an untethered spanner and no barrier below.',
+          scene:'A colleague is doing a quick fix on a platform above the oven line, over a busy walkway. Their spanner isn\u2019t tethered and there\u2019s no barrier below.',
+          actions:[
+            {t:'Ask them to pause; barrier the area or tether the tool first.', ok:true, fb:'Working at height over a live walkway needs the route closed off or the tools secured \u2014 ideally both.'},
+            {t:'Walk through quickly \u2014 it\u2019ll only take a minute.', ok:false, fb:'A short job overhead is still long enough for a dropped tool to land on someone below.'},
+            {t:'Shout a warning to people walking past.', ok:false, fb:'A shout depends on people hearing and reacting in time. A barrier or tether removes the risk.'}
+          ]},
+        { hazard:true, icon:'frame', topic:'Struck against', label:'Packing corner',
+          det:'Exposed conveyor frame at hip height, right where people cut the corner.',
+          scene:'Turning from the packing area onto the main corridor, a section of exposed conveyor frame sits at hip height, close to where people naturally cut the corner.',
+          actions:[
+            {t:'Report it for guarding; use the wider path meanwhile.', ok:true, fb:'Exposed frame edges on a walked route should be guarded or padded. Flag it and take the safer path until fixed.'},
+            {t:'Keep cutting the corner \u2014 you know it\u2019s there.', ok:false, fb:'Knowing doesn\u2019t protect the next person, or you on a distracted day.'},
+            {t:'Mark it with tape as a reminder.', ok:false, fb:'Tape doesn\u2019t change the fact the edge is exposed on a walking route. It needs proper guarding.'}
+          ]},
+        { hazard:false, topic:'Struck against', icon:'shield', label:'Machine guard',
+          det:'Intact and sitting flush with the walkway, nothing protruding.',
+          safe:'The guard\u2019s intact and flush \u2014 nothing sticking into the route to be struck against. Nothing to flag.' },
+        { hazard:false, topic:'Struck by', icon:'crates', label:'Pastry trays',
+          det:'Stacked to a safe height and banded, well clear of the gangway.',
+          safe:'Trays stacked to a safe height, banded so nothing can fall or be struck by \u2014 stored correctly. Good practice.' }
+      ]
+    },
+    {
+      name:'Salad Factory',
+      intro:'Wash lines running almost constantly, so wet floors and washing equipment are the everyday risks here.',
+      lead:'Five points on the salad floor. <b>Tap whatever you\u2019d flag.</b>',
+      items:[
+        { hazard:true, icon:'pipe', topic:'Struck against', label:'Wash-line spray bar',
+          det:'An overhead spray bar crosses the walkway at head height, unmarked.',
+          scene:'The salad wash line has an overhead spray bar and pipework crossing the walkway at head height. It\u2019s never been marked, and you\u2019ve clipped it before.',
+          actions:[
+            {t:'Report it to get it marked, padded, or rerouted.', ok:true, fb:'A known fixed hazard should be made obvious or removed \u2014 not left for people to remember to duck.'},
+            {t:'Duck as you go through, like you always do.', ok:false, fb:'Ducking from memory is a personal workaround. One distracted moment, or one visitor, and it causes an injury.'},
+            {t:'Put up your own handwritten sign.', ok:false, fb:'A DIY sign doesn\u2019t fix the hazard and may not meet site standards. Report it for a proper fix.'}
+          ]},
+        { hazard:true, icon:'cable', topic:'Slips, trips & falls', label:'Wash-tank hose',
+          det:'A pressure-washer hose runs across the main walkway, taped but still raised.',
+          scene:'A pressure-washer hose for the wash tanks runs straight across the main walkway, taped down but still raised slightly off the floor.',
+          actions:[
+            {t:'Reroute it, cover it with a ramp, or run it overhead.', ok:true, fb:'The safe fix removes the trip hazard from the route entirely \u2014 not just taping it flatter.'},
+            {t:'Leave it \u2014 it\u2019s taped, so probably fine.', ok:false, fb:'Tape reduces movement but leaves a raised edge across a main route. That\u2019s still a trip hazard.'},
+            {t:'Add another layer of tape.', ok:false, fb:'More tape doesn\u2019t change that a hose crosses a main walkway. It needs rerouting or proper covering.'}
+          ]},
+        { hazard:true, icon:'spill', topic:'Slips, trips & falls', label:'Spin-line floor',
+          det:'A blocked drain has left standing water across the walkway.',
+          scene:'The washing and spinning line runs constantly and the floor is often wet. Today a blocked drain has left standing water across the walkway.',
+          actions:[
+            {t:'Report the blocked drain; get a warning or matting out meanwhile.', ok:true, fb:'Standing water by a wash line is foreseeable \u2014 fix the drainage, and warn or mat the route until it\u2019s clear.'},
+            {t:'Step around the wet patch and carry on.', ok:false, fb:'Careful footing does nothing for the next person, and doesn\u2019t fix a recurring cause.'},
+            {t:'Squeegee it and move on without reporting the drain.', ok:false, fb:'Clear it and the blocked drain just refills the puddle within the hour. Report the cause.'}
+          ]},
+        { hazard:false, topic:'Slips, trips & falls', icon:'sign', label:'Cordoned wet bay',
+          det:'A barrier and sign already up around a bay that\u2019s being washed.',
+          safe:'The wet bay\u2019s already cordoned and signed \u2014 the slip control is in place. Nothing to flag here.' },
+        { hazard:false, topic:'Struck against', icon:'boxed', label:'Guarded spray bar',
+          det:'A second spray bar here is padded and clearly marked at head height.',
+          safe:'This spray bar is padded and marked \u2014 the struck-against risk has been designed out. Good practice, unlike the unmarked one.' }
+      ]
+    }
+  ];
+
+  // ---- state ----
+  let areaIdx = 0;
+  let risk = 10;
+  let resolved = {};
+  let found = 0, missed = 0, wrongActions = 0, falseAlarms = 0;
+  let totalHazards = 0;
+  let missedNames = [];
+  let review = [];
+  let activeItem = null, activeChoices = null, areaHazardCount = 0, areaFoundCount = 0;
+
+  AREAS.forEach(a => a.items.forEach(it => { if (it.hazard) totalHazards++; }));
+
+  const el = id => document.getElementById(id);
+  const show = (id) => el(id).classList.remove('hidden');
+  const hide = (id) => el(id).classList.add('hidden');
+
+  function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+  function riskBand(r){
+    if (r < 25) return {label:'Low', color:'var(--good)'};
+    if (r < 55) return {label:'Rising', color:'var(--amber)'};
+    if (r < 80) return {label:'High', color:'var(--orange)'};
+    return {label:'Critical', color:'var(--danger)'};
+  }
+  function updateRisk(){
+    const b = riskBand(risk);
+    el('riskFill').style.width = Math.max(4, risk) + '%';
+    el('riskFill').style.background = b.color;
+    el('riskValue').textContent = b.label;
+    el('riskValue').style.color = b.color;
+  }
+
+  el('startBtn').addEventListener('click', () => {
+    areaIdx = 0; risk = 10; found = 0; missed = 0; wrongActions = 0; falseAlarms = 0;
+    missedNames = []; review = [];
+    hide('startScreen'); showIntro();
+  });
+  el('restartBtn').addEventListener('click', () => { hide('endScreen'); show('startScreen'); });
+  el('enterBtn').addEventListener('click', () => { hide('introScreen'); renderArea(); });
+  el('doneNextBtn').addEventListener('click', () => {
+    hide('areaDoneScreen');
+    if (areaIdx >= AREAS.length) showEnd(); else showIntro();
+  });
+
+  function showIntro(){
+    const a = AREAS[areaIdx];
+    el('introArea').textContent = `Stop ${areaIdx+1} of ${AREAS.length} \u00B7 ${a.name}`;
+    el('introTitle').textContent = a.name;
+    el('introText').textContent = a.intro;
+    const banner = el('introBanner');
+    if (areaIdx > 0 && missedNames.length > 0 && risk >= 40){
+      const ref = missedNames[missedNames.length-1];
+      el('introBannerText').innerHTML = `<b>Word from earlier \u2014</b> the ${ref} you walked past has been logged as a near-miss. It\u2019s the kind of thing that lands on a supervisor\u2019s desk before end of shift.`;
+      banner.classList.add('show');
+    } else {
+      banner.classList.remove('show');
+    }
+    show('introScreen');
+  }
+
+  function renderArea(){
+    const a = AREAS[areaIdx];
+    resolved = {};
+    areaHazardCount = a.items.filter(it => it.hazard).length;
+    areaFoundCount = 0;
+
+    el('roundCount').textContent = `Stop ${areaIdx+1} / ${AREAS.length}`;
+    el('progressFill').style.width = `${(areaIdx/AREAS.length)*100}%`;
+    el('areaChip').textContent = a.name;
+    el('areaLead').innerHTML = a.lead;
+    updateRisk();
+    updateCount();
+
+    const grid = el('grid');
+    grid.innerHTML = '';
+    a.items.forEach((it, i) => {
+      const key = areaIdx + '-' + i;
+      const tile = document.createElement('button');
+      tile.className = 'tile';
+      tile.dataset.key = key;
+      tile.innerHTML =
+        `<div class="ic"><svg viewBox="0 0 32 32" fill="none" stroke-linecap="round">${ICONS[it.icon]}</svg></div>`+
+        `<div class="lbl">${it.label}</div>`+
+        `<div class="det">${it.det}</div>`+
+        `<div class="status"></div>`;
+      tile.addEventListener('click', () => tapItem(i));
+      grid.appendChild(tile);
+    });
+
+    el('leaveBtn').textContent = 'Move on to the next area';
+    show('gameScreen');
+  }
+
+  function updateCount(){
+    el('countChip').textContent = `Hazards flagged: ${areaFoundCount} / ${areaHazardCount}`;
+  }
+
+  function tapItem(i){
+    const a = AREAS[areaIdx];
+    const it = a.items[i];
+    const key = areaIdx + '-' + i;
+    if (resolved[key]) return;
+    activeItem = { it, key, i };
+
+    el('mTitle').textContent = it.label;
+    el('mScene').textContent = it.scene || it.det;
+
+    if (it.hazard){
+      const topicEl = el('mTopic');
+      topicEl.textContent = it.topic;
+      topicEl.className = 'm-topic ' + TCLASS[it.topic];
+      topicEl.style.display = 'inline-block';
+      el('mHazardBlock').style.display = 'block';
+      el('mSafeBlock').classList.remove('show');
+
+      activeChoices = shuffle(it.actions);
+      const wrap = el('mActions');
+      wrap.innerHTML = '';
+      activeChoices.forEach((c, j) => {
+        const b = document.createElement('button');
+        b.className = 'action';
+        b.textContent = c.t;
+        b.addEventListener('click', () => chooseAction(j));
+        wrap.appendChild(b);
+      });
+      el('mFeedback').className = 'm-feedback';
+      el('mClose').classList.remove('show');
+    } else {
+      const topicEl = el('mTopic');
+      topicEl.textContent = it.topic + ' \u00B7 controlled';
+      topicEl.className = 'm-topic ' + TCLASS[it.topic];
+      topicEl.style.display = 'inline-block';
+      el('mHazardBlock').style.display = 'none';
+      el('mSafeBlock').classList.add('show');
+      el('mSafeText').textContent = it.safe;
+      falseAlarms++;
+      risk = Math.min(100, risk + 4);
+      updateRisk();
+      markTile(key, 'false', 'False alarm');
+      resolved[key] = true;
+      review.push({ area:a.name, label:it.label, topic:it.topic, outcome:'false' });
+    }
+    el('overlay').classList.add('show');
+  }
+
+  function chooseAction(j){
+    const a = AREAS[areaIdx];
+    const chosen = activeChoices[j];
+    const buttons = el('mActions').querySelectorAll('.action');
+    buttons.forEach((b, k) => {
+      b.disabled = true;
+      if (activeChoices[k].ok) b.classList.add('correct');
+      else if (k === j) b.classList.add('wrong');
+      else b.classList.add('dim');
+    });
+
+    areaFoundCount++;
+    found++;
+    updateCount();
+
+    const fb = el('mFeedback');
+    if (chosen.ok){
+      risk = Math.max(0, risk - 5);
+      fb.className = 'm-feedback good show';
+      el('mFbHead').textContent = 'Spotted and controlled';
+      markTile(activeItem.key, 'good', 'Controlled');
+      review.push({ area:a.name, label:activeItem.it.label, topic:activeItem.it.topic, outcome:'good' });
+    } else {
+      wrongActions++;
+      risk = Math.min(100, risk + 6);
+      fb.className = 'm-feedback bad show';
+      el('mFbHead').textContent = 'Spotted \u2014 but not dealt with right';
+      markTile(activeItem.key, 'part', 'Not controlled');
+      review.push({ area:a.name, label:activeItem.it.label, topic:activeItem.it.topic, outcome:'part' });
+    }
+    el('mFbText').textContent = chosen.fb;
+    resolved[activeItem.key] = true;
+    updateRisk();
+    el('mClose').classList.add('show');
+  }
+
+  function markTile(key, cls, statusText){
+    const tile = el('grid').querySelector(`[data-key="${key}"]`);
+    if (!tile) return;
+    tile.classList.add('done-' + cls);
+    tile.disabled = true;
+    const st = tile.querySelector('.status');
+    st.textContent = statusText;
+    st.className = 'status ' + cls;
+  }
+
+  el('mClose').addEventListener('click', () => el('overlay').classList.remove('show'));
+  el('mSafeClose').addEventListener('click', () => el('overlay').classList.remove('show'));
+
+  el('leaveBtn').addEventListener('click', () => {
+    const a = AREAS[areaIdx];
+    let areaMissed = 0;
+    a.items.forEach((it, i) => {
+      const key = areaIdx + '-' + i;
+      if (it.hazard && !resolved[key]){
+        missed++; areaMissed++;
+        risk = Math.min(100, risk + 12);
+        missedNames.push(it.label.toLowerCase());
+        review.push({ area:a.name, label:it.label, topic:it.topic, outcome:'missed' });
+        markTile(key, 'missed', 'Missed');
+      }
+    });
+    updateRisk();
+    hide('gameScreen');
+    showAreaDone(areaMissed);
+    areaIdx++;
+  });
+
+  function showAreaDone(areaMissed){
+    const a = AREAS[areaIdx];
+    el('doneArea').textContent = a.name + ' \u2014 walked';
+    el('doneTitle').textContent = areaMissed === 0 ? 'Floor cleared' : 'You moved on';
+    el('doneStats').innerHTML =
+      `<div class="stat"><div class="v" style="color:var(--good)">${areaFoundCount}</div><div class="k">flagged</div></div>`+
+      `<div class="stat"><div class="v" style="color:${areaMissed?'var(--danger)':'var(--muted)'}">${areaMissed}</div><div class="k">walked past</div></div>`+
+      `<div class="stat"><div class="v" style="color:${riskBand(risk).color}">${riskBand(risk).label}</div><div class="k">shift risk</div></div>`;
+    el('doneText').textContent = areaMissed === 0
+      ? 'Every hazard on that floor got flagged. That\u2019s the standard \u2014 keep it up as the shift goes on.'
+      : `${areaMissed} hazard${areaMissed>1?'s':''} left behind you. On a real shift, those are the ones that turn into the incident you hear about later.`;
+    el('doneNextBtn').textContent = (areaIdx+1 >= AREAS.length) ? 'Finish the shift' : 'On to the next area';
+    show('areaDoneScreen');
+  }
+
+  function showEnd(){
+    const net = Math.max(0, found - wrongActions);
+    const pct = Math.round(net / totalHazards * 100);
+    el('finalPct').textContent = `${pct}%`;
+
+    let heading, ring;
+    if (pct >= 90 && risk < 25){ heading = 'Sharp and site-ready'; ring = 'var(--good)'; }
+    else if (pct >= 70){ heading = 'Solid, with a few gaps'; ring = 'var(--amber)'; }
+    else if (pct >= 45){ heading = 'Getting there'; ring = 'var(--orange)'; }
+    else { heading = 'Worth walking again'; ring = 'var(--danger)'; }
+    el('endHeading').textContent = heading;
+    document.querySelector('.badge-ring').style.borderColor = ring;
+
+    el('endStats').innerHTML =
+      `<div class="stat"><div class="v" style="color:var(--good)">${net}/${totalHazards}</div><div class="k">controlled</div></div>`+
+      `<div class="stat"><div class="v" style="color:var(--danger)">${missed}</div><div class="k">near-misses</div></div>`+
+      `<div class="stat"><div class="v" style="color:${riskBand(risk).color}">${riskBand(risk).label}</div><div class="k">final risk</div></div>`;
+
+    let extra = '';
+    if (wrongActions) extra += ` You spotted ${wrongActions} hazard${wrongActions>1?'s':''} but didn\u2019t handle ${wrongActions>1?'them':'it'} the safest way.`;
+    if (falseAlarms) extra += ` ${falseAlarms} good-practice item${falseAlarms>1?'s were':' was'} flagged as a hazard \u2014 over-flagging slows the line and dilutes real reports.`;
+    el('endSummary').textContent =
+      (missed === 0
+        ? 'You didn\u2019t walk past a single hazard all shift.'
+        : `You walked past ${missed} hazard${missed>1?'s':''} across the shift.`) + extra;
+
+    const list = el('reviewList');
+    list.innerHTML = '';
+    review.forEach(r => {
+      const row = document.createElement('div');
+      const cls = r.outcome === 'good' ? 'right' : (r.outcome === 'missed' ? 'missed' : 'part');
+      const mark = r.outcome === 'good' ? 'Controlled'
+        : r.outcome === 'missed' ? 'Missed'
+        : r.outcome === 'false' ? 'False alarm' : 'Review';
+      row.className = 'review-row ' + cls;
+      row.innerHTML = `<span>${r.label} <span style="color:var(--muted)">\u00B7 ${r.area}</span></span><span class="mark">${mark}</span>`;
+      list.appendChild(row);
+    });
+
+    hide('areaDoneScreen'); show('endScreen');
+  }
+
+})();
+</script>
 </body>
 </html>
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
